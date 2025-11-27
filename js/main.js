@@ -355,7 +355,7 @@ if (onlineModeBtn) {
 
 if (createRoomBtn) {
   createRoomBtn.addEventListener("click", () => {
-    const roomId = multiplayer.createRoom();
+    multiplayer.createRoom(); // Just sets isHost = true internally
     roomInfo.classList.remove("hidden");
     createRoomBtn.classList.add("hidden");
     document.querySelector(".join-room-container").classList.add("hidden");
