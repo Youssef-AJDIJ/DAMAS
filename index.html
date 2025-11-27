@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Juego de Damas con IA - Diseño moderno y sistema de puntuación"
+    />
+    <meta name="keywords" content="damas, checkers, juego, estrategia, IA" />
+    <title>Damas - Juego de Estrategia vs IA</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="setup-screen">
+      <div class="setup-container">
+        <h1>🎮 Juego de Damas 🎮</h1>
+        <h2>Configuración del Juego</h2>
+
+        <form id="setup-form" class="setup-form">
+          <div class="form-group">
+            <label for="player-name">Tu Nombre</label>
+            <input
+              type="text"
+              id="player-name"
+              name="player-name"
+              placeholder="Ingresa tu nombre..."
+              maxlength="20"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Elige tu Color</label>
+            <div class="color-selector">
+              <label class="color-option">
+                <input type="radio" name="player-color" value="red" checked />
+                <span class="color-circle red"></span>
+                <span class="color-label">Rojo</span>
+              </label>
+              <label class="color-option">
+                <input type="radio" name="player-color" value="black" />
+                <span class="color-circle black"></span>
+                <span class="color-label">Negro</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>¿Quién Empieza?</label>
+            <div class="starter-selector">
+              <label class="starter-option">
+                <input type="radio" name="first-move" value="player" checked />
+                <span class="starter-label">Yo Empiezo</span>
+              </label>
+              <label class="starter-option">
+                <input type="radio" name="first-move" value="cpu" />
+                <span class="starter-label">CPU Empieza</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Dificultad de la IA</label>
+            <div class="difficulty-selector">
+              <label class="difficulty-option">
+                <input type="radio" name="difficulty" value="easy" checked />
+                <span class="difficulty-label">🎯 Fácil</span>
+              </label>
+              <label class="difficulty-option">
+                <input type="radio" name="difficulty" value="medium" />
+                <span class="difficulty-label">⚡ Media</span>
+              </label>
+              <label class="difficulty-option">
+                <input type="radio" name="difficulty" value="hard" />
+                <span class="difficulty-label">🔥 Difícil</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="start-game-btn">
+            ¡Comenzar a Jugar!
+          </button>
+        </form>
+
+        <div class="stats-preview">
+          <h3>📊 Tus Estadísticas</h3>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-number" id="preview-wins">0</span>
+              <span class="stat-text">Victorias</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="preview-draws">0</span>
+              <span class="stat-text">Empates</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="preview-losses">0</span>
+              <span class="stat-text">Derrotas</span>
+            </div>
+          </div>
+          <button
+            id="clear-data-btn"
+            class="btn clear-data-btn"
+            type="button"
+          >
+            🗑️ Borrar Datos
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <main id="game-screen" class="game-screen" >
+      <h1>🎮 Juego de Damas 🎮</h1>
+
+      <div class="game-container-single">
+        <!-- Player Card -->
+        <div class="player-card single-player" id="player-card">
+          <h2>
+            <span class="player-indicator" id="player-indicator"></span>
+            <span id="player-display-name">Jugador</span>
+          </h2>
+          <div class="stats">
+            <div class="stat-item">
+              <span class="stat-value" id="player-wins">0</span>
+              <span class="stat-label">Ganadas</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="player-draws">0</span>
+              <span class="stat-label">Empates</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="player-losses">0</span>
+              <span class="stat-label">Perdidas</span>
+            </div>
+          </div>
+          <div class="piece-count-container">
+            <div class="piece-count">
+              <span class="count-label">Fichas:</span>
+              <span class="count-value" id="player-piece-count">12</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Board Section -->
+        <div class="board-section">
+          <div id="board"></div>
+          <div id="status-message">Preparando juego...</div>
+
+          <div class="controls">
+            <button id="new-btn">🔄 Nuevo Juego</button>
+            <button id="back-setup-btn">⚙️ Configuración</button>
+            <button id="clear-btn" class="btn" type="button">🗑️ Borrar Datos</button>
+          </div>
+        </div>
+
+        <!-- CPU Card -->
+        <div class="player-card single-player cpu-card" id="cpu-card">
+          <h2>
+            <span class="player-indicator" id="cpu-indicator"></span>
+            🤖 CPU
+          </h2>
+          <div class="stats">
+            <div class="stat-item">
+              <span class="stat-value" id="cpu-wins">0</span>
+              <span class="stat-label">Ganadas</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="cpu-draws">0</span>
+              <span class="stat-label">Empates</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="cpu-losses">0</span>
+              <span class="stat-label">Perdidas</span>
+            </div>
+          </div>
+          <div class="piece-count-container">
+            <div class="piece-count">
+              <span class="count-label">Fichas:</span>
+              <span class="count-value" id="cpu-piece-count">12</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Game Result Modal -->
+    <div class="modal" id="result-modal">
+      <div class="modal-content">
+        <h2 id="result-title">🎉 ¡Victoria! 🎉</h2>
+        <p id="result-message">¡Felicidades!</p>
+        <div class="modal-buttons">
+          <button id="modal-new-game">Nuevo Juego</button>
+          <button id="modal-back-setup">Configuración</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

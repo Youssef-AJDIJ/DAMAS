@@ -1,0 +1,135 @@
+/* CSS Reset for consistent styling across browsers */
+/* ==================== ROOT VARIABLES ==================== */
+:root {
+  /* Color Palette */
+  --bg-gradient-start: #0f0c29;
+  --bg-gradient-mid: #302b63;
+  --bg-gradient-end: #24243e;
+
+  --board-light: #f0e7dc;
+  --board-dark: #4a3f35;
+  --board-border: rgba(255, 255, 255, 0.1);
+
+  --piece-red: linear-gradient(145deg, #e74c3c, #c0392b);
+  --piece-black: linear-gradient(145deg, #2c3e50, #1a1a1a);
+  --piece-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+
+  --selected-glow: #ffd700;
+  --valid-move: rgba(76, 175, 80, 0.8);
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.8);
+
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+
+  --btn-primary: linear-gradient(145deg, #667eea, #764ba2);
+  --btn-secondary: linear-gradient(145deg, #f093fb, #f5576c);
+  --btn-success: linear-gradient(145deg, #4facfe, #00f2fe);
+  --btn-danger: linear-gradient(145deg, #fa709a, #fee140);
+
+  /* Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  line-height: 1.6;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+button:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+input {
+  font-family: inherit;
+  border: none;
+  outline: none;
+}
+
+input:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* ==================== GLOBAL STYLES ==================== */
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: linear-gradient(
+    135deg,
+    var(--bg-gradient-start) 0%,
+    var(--bg-gradient-mid) 50%,
+    var(--bg-gradient-end) 100%
+  );
+  min-height: 100vh;
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+      circle at 20% 50%,
+      rgba(120, 119, 198, 0.15) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(255, 119, 198, 0.15) 0%,
+      transparent 50%
+    );
+  animation: backgroundShift 15s ease infinite;
+  pointer-events: none;
+  z-index: -1;
+}
