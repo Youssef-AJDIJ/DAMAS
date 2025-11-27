@@ -82,9 +82,18 @@
           <button type="submit" class="start-game-btn">
             ¡Comenzar a Jugar!
           </button>
+
+          <button
+            type="button"
+            id="online-mode-btn"
+            class="btn-secondary"
+            style="margin-top: 10px; width: 100%"
+          >
+            🌐 Jugar Online con Amigo
+          </button>
         </form>
 
-        <div class="stats-preview">
+        <div class="stats-preview" style="display: none">
           <h3>📊 Tus Estadísticas</h3>
           <div class="stats-grid">
             <div class="stat-box">
@@ -100,11 +109,7 @@
               <span class="stat-text">Derrotas</span>
             </div>
           </div>
-          <button
-            id="clear-data-btn"
-            class="btn clear-data-btn"
-            type="button"
-          >
+          <button id="clear-data-btn" class="btn clear-data-btn" type="button">
             🗑️ Borrar Datos
           </button>
         </div>
@@ -112,7 +117,7 @@
     </div>
 
     <!-- Game Screen -->
-    <main id="game-screen" class="game-screen" >
+    <main id="game-screen" class="game-screen">
       <h1>🎮 Juego de Damas 🎮</h1>
 
       <div class="game-container-single">
@@ -152,7 +157,9 @@
           <div class="controls">
             <button id="new-btn">🔄 Nuevo Juego</button>
             <button id="back-setup-btn">⚙️ Configuración</button>
-            <button id="clear-btn" class="btn" type="button">🗑️ Borrar Datos</button>
+            <button id="clear-btn" class="btn" type="button">
+              🗑️ Borrar Datos
+            </button>
           </div>
         </div>
 
@@ -195,6 +202,49 @@
           <button id="modal-new-game">Nuevo Juego</button>
           <button id="modal-back-setup">Configuración</button>
         </div>
+      </div>
+    </div>
+
+    <!-- PeerJS for WebRTC -->
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+
+    <!-- Video Chat Container -->
+    <div id="video-container" class="video-container hidden">
+      <div class="video-wrapper local">
+        <video id="local-video" autoplay muted playsinline></video>
+        <span class="video-label">Tú</span>
+      </div>
+      <div class="video-wrapper remote">
+        <video id="remote-video" autoplay playsinline></video>
+        <span class="video-label">Oponente</span>
+      </div>
+    </div>
+
+    <!-- Online Lobby Modal -->
+    <div class="modal" id="online-lobby-modal">
+      <div class="modal-content">
+        <h2>🌐 Juego Online</h2>
+        <div class="online-options">
+          <button id="create-room-btn" class="btn-primary">Crear Sala</button>
+          <div class="divider">O</div>
+          <div class="join-room-container">
+            <input
+              type="text"
+              id="room-id-input"
+              placeholder="Pegar código de sala..."
+            />
+            <button id="join-room-btn" class="btn-secondary">Unirse</button>
+          </div>
+        </div>
+        <div id="room-info" class="hidden">
+          <p>Tu código de sala:</p>
+          <div class="code-display">
+            <span id="my-room-id">Generando...</span>
+            <button id="copy-code-btn">📋</button>
+          </div>
+          <p class="waiting-text">Esperando oponente...</p>
+        </div>
+        <button id="close-lobby-btn" class="btn-text">Cancelar</button>
       </div>
     </div>
 

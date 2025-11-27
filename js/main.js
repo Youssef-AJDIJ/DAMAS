@@ -6,6 +6,7 @@ import {
   resetPlayerStats,
 } from "./utils/storage.js";
 import { CheckersAI } from "./utils/ai.js";
+import { MultiplayerManager } from "./multiplayer.js";
 
 // Screens
 const setupScreen = document.getElementById("setup-screen");
@@ -17,6 +18,20 @@ const playerNameInput = document.getElementById("player-name");
 const previewWins = document.getElementById("preview-wins");
 const previewDraws = document.getElementById("preview-draws");
 const previewLosses = document.getElementById("preview-losses");
+const onlineModeBtn = document.getElementById("online-mode-btn");
+
+// Online Lobby Elements
+const onlineLobbyModal = document.getElementById("online-lobby-modal");
+const createRoomBtn = document.getElementById("create-room-btn");
+const joinRoomBtn = document.getElementById("join-room-btn");
+const roomIdInput = document.getElementById("room-id-input");
+const roomInfo = document.getElementById("room-info");
+const myRoomIdEl = document.getElementById("my-room-id");
+const copyCodeBtn = document.getElementById("copy-code-btn");
+const closeLobbyBtn = document.getElementById("close-lobby-btn");
+const videoContainer = document.getElementById("video-container");
+const localVideo = document.getElementById("local-video");
+const remoteVideo = document.getElementById("remote-video");
 
 // Game DOM Elements
 const boardEl = document.getElementById("board");
@@ -31,7 +46,7 @@ const playerDrawsEl = document.getElementById("player-draws");
 const playerLossesEl = document.getElementById("player-losses");
 const playerPieceCount = document.getElementById("player-piece-count");
 
-// CPU card elements
+// CPU/Opponent card elements
 const cpuCard = document.getElementById("cpu-card");
 const cpuIndicator = document.getElementById("cpu-indicator");
 const cpuWinsEl = document.getElementById("cpu-wins");
@@ -61,6 +76,7 @@ let gameConfig = {
 
 // AI instance
 let ai;
+let multiplayer;
 
 // CPU stats (separate from player stats)
 const CPU_STATS_KEY = "cpu";
@@ -105,6 +121,7 @@ function showSetupScreen() {
   gameScreen.classList.add("hidden");
   setupScreen.classList.remove("hidden");
   gameScreen.classList.remove("active");
+  videoContainer.classList.add("hidden");
 }
 
 function showGameScreen() {
@@ -114,41 +131,90 @@ function showGameScreen() {
   gameScreen.classList.add("active");
 }
 
-function startGame() {
-  // Create AI with selected difficulty
-  ai = new CheckersAI(gameConfig.difficulty);
-
+function startGame(isOnline = false, onlineConfig = null) {
   // Initialize game
   game = new Game(boardEl, statusEl, handleGameEnd, handlePieceCountChange);
-  game.setPlayerInfo(gameConfig.playerName, gameConfig.playerColor, true, ai);
 
-  // Set up player indicators
-  playerIndicator.className = `player-indicator ${gameConfig.playerColor}`;
-  cpuIndicator.className = `player-indicator ${
-    gameConfig.playerColor === "red" ? "black" : "red"
-  }`;
+  if (isOnline && onlineConfig) {
+    // Online Setup
+    gameConfig.playerName = playerNameInput.value.trim() || "Jugador";
+    gameConfig.playerColor = onlineConfig.color;
 
-  // Display player name
-  playerDisplayName.textContent = gameConfig.playerName;
+    game.setPlayerInfo(
+      gameConfig.playerName,
+      gameConfig.playerColor,
+      false,
+      null
+    );
+    game.setOnlineMode(true, onlineConfig.color, (move) => {
+      multiplayer.sendMove(move);
+    });
 
-  // Load and display statistics
-  updateStatisticsDisplay();
+    // Set opponent name
+    const opponentName = onlineConfig.opponentName;
 
-  // Reset and start
-  game.reset();
-  game.setFirstPlayer(gameConfig.firstMove);
+    // Update UI for online
+    playerIndicator.className = `player-indicator ${gameConfig.playerColor}`;
+    cpuIndicator.className = `player-indicator ${
+      gameConfig.playerColor === "red" ? "black" : "red"
+    }`;
 
-  // Show game screen
-  showGameScreen();
+    playerDisplayName.textContent = gameConfig.playerName;
+    // Change CPU card to Opponent card
+    document.querySelector("#cpu-card h2").innerHTML = `
+      <span class="player-indicator" id="cpu-indicator"></span>
+      👤 ${opponentName}
+    `;
 
-  // Update active player indicators
-  updateActivePlayer();
+    // Hide difficulty/stats for online (simplified)
+    updateStatisticsDisplay();
 
-  // If CPU starts, make AI move
-  if (gameConfig.firstMove === "cpu" && !game.gameOver) {
-    setTimeout(() => {
-      game.makeAIMove();
-    }, 2000);
+    game.reset();
+    // Red always starts
+    game.currentPlayer = "red";
+    game.updateStatus();
+
+    showGameScreen();
+    videoContainer.classList.remove("hidden");
+    updateActivePlayer();
+  } else {
+    // Local/AI Setup
+    ai = new CheckersAI(gameConfig.difficulty);
+    game.setPlayerInfo(gameConfig.playerName, gameConfig.playerColor, true, ai);
+
+    // Set up player indicators
+    playerIndicator.className = `player-indicator ${gameConfig.playerColor}`;
+    cpuIndicator.className = `player-indicator ${
+      gameConfig.playerColor === "red" ? "black" : "red"
+    }`;
+
+    // Display player name
+    playerDisplayName.textContent = gameConfig.playerName;
+    document.querySelector("#cpu-card h2").innerHTML = `
+      <span class="player-indicator" id="cpu-indicator"></span>
+      🤖 CPU
+    `;
+
+    // Load and display statistics
+    updateStatisticsDisplay();
+
+    // Reset and start
+    game.reset();
+    game.setFirstPlayer(gameConfig.firstMove);
+
+    // Show game screen
+    showGameScreen();
+    videoContainer.classList.add("hidden");
+
+    // Update active player indicators
+    updateActivePlayer();
+
+    // If CPU starts, make AI move
+    if (gameConfig.firstMove === "cpu" && !game.gameOver) {
+      setTimeout(() => {
+        game.makeAIMove();
+      }, 2000);
+    }
   }
 
   // Expose for debugging
@@ -159,27 +225,33 @@ function handleGameEnd(result) {
   if (result.result === "win") {
     if (result.winner === "player") {
       // Player won
-      incrementPlayerStat(gameConfig.playerName, "wins");
-      incrementPlayerStat(CPU_STATS_KEY, "losses");
+      if (!game.isOnline) {
+        incrementPlayerStat(gameConfig.playerName, "wins");
+        incrementPlayerStat(CPU_STATS_KEY, "losses");
+      }
 
       showResultModal(
         "🎉 ¡Victoria! 🎉",
-        `¡Felicidades ${gameConfig.playerName}! Has ganado la partida contra la CPU.`
+        `¡Felicidades ${gameConfig.playerName}! Has ganado.`
       );
     } else {
-      // CPU won
-      incrementPlayerStat(gameConfig.playerName, "losses");
-      incrementPlayerStat(CPU_STATS_KEY, "wins");
+      // Opponent/CPU won
+      if (!game.isOnline) {
+        incrementPlayerStat(gameConfig.playerName, "losses");
+        incrementPlayerStat(CPU_STATS_KEY, "wins");
+      }
 
       showResultModal(
         "😔 Derrota",
-        `La CPU ha ganado esta vez. ¡Inténtalo de nuevo!`
+        `Has perdido esta vez. ¡Inténtalo de nuevo!`
       );
     }
   } else if (result.result === "draw") {
     // Draw
-    incrementPlayerStat(gameConfig.playerName, "draws");
-    incrementPlayerStat(CPU_STATS_KEY, "draws");
+    if (!game.isOnline) {
+      incrementPlayerStat(gameConfig.playerName, "draws");
+      incrementPlayerStat(CPU_STATS_KEY, "draws");
+    }
 
     showResultModal("🤝 Empate 🤝", "La partida ha terminado en empate.");
   }
@@ -230,6 +302,12 @@ function hideResultModal() {
 
 function resetGame() {
   if (game) {
+    if (game.isOnline) {
+      // Online reset not fully implemented (would need sync)
+      alert("Reiniciar partida online requiere reconexión.");
+      return;
+    }
+
     game.reset();
     game.setFirstPlayer(gameConfig.firstMove);
     updateActivePlayer();
@@ -243,15 +321,73 @@ function resetGame() {
   }
 }
 
-// Event Listeners
+// --- ONLINE MULTIPLAYER HANDLERS ---
+
+if (onlineModeBtn) {
+  onlineModeBtn.addEventListener("click", () => {
+    onlineLobbyModal.classList.add("show");
+
+    // Initialize multiplayer manager
+    multiplayer = new MultiplayerManager(
+      (move) => {
+        // On move received
+        if (game) game.makeRemoteMove(move);
+      },
+      (config) => {
+        // On game start
+        onlineLobbyModal.classList.remove("show");
+        startGame(true, config);
+      },
+      () => {
+        // On disconnect
+        alert("El oponente se ha desconectado.");
+        location.reload();
+      }
+    );
+
+    multiplayer.initialize(localVideo, remoteVideo).then((id) => {
+      myRoomIdEl.textContent = id;
+      // Show video container immediately so user can see themselves
+      videoContainer.classList.remove("hidden");
+    });
+  });
+}
+
+if (createRoomBtn) {
+  createRoomBtn.addEventListener("click", () => {
+    const roomId = multiplayer.createRoom();
+    roomInfo.classList.remove("hidden");
+    createRoomBtn.classList.add("hidden");
+    document.querySelector(".join-room-container").classList.add("hidden");
+    document.querySelector(".divider").classList.add("hidden");
+  });
+}
+
+if (joinRoomBtn) {
+  joinRoomBtn.addEventListener("click", () => {
+    const roomId = roomIdInput.value.trim();
+    if (roomId) {
+      multiplayer.joinRoom(roomId);
+      joinRoomBtn.textContent = "Conectando...";
+      joinRoomBtn.disabled = true;
+    }
+  });
+}
+
 newGameBtn.addEventListener("click", () => {
   resetGame();
   hideResultModal();
 });
 
 backSetupBtn.addEventListener("click", () => {
-  showSetupScreen();
-  hideResultModal();
+  if (game && game.isOnline) {
+    if (confirm("¿Salir de la partida online?")) {
+      location.reload();
+    }
+  } else {
+    showSetupScreen();
+    hideResultModal();
+  }
 });
 
 modalNewGameBtn.addEventListener("click", () => {
@@ -278,15 +414,19 @@ setInterval(() => {
 
 // Clear Data Button
 const clearBtn = document.getElementById("clear-btn");
-clearBtn.addEventListener("click", () => {
-  console.log("Borrando datos...");
-  if (confirm("¿Estás seguro de que quieres borrar todas las estadísticas?")) {
-    localStorage.clear();
-    updateStatsPreview(); // For setup screen
-    updateStatisticsDisplay(); // For game screen
-    alert("Datos borrados correctamente.");
-  }
-});
+if (clearBtn) {
+  clearBtn.addEventListener("click", () => {
+    console.log("Borrando datos...");
+    if (
+      confirm("¿Estás seguro de que quieres borrar todas las estadísticas?")
+    ) {
+      localStorage.clear();
+      updateStatsPreview(); // For setup screen
+      updateStatisticsDisplay(); // For game screen
+      alert("Datos borrados correctamente.");
+    }
+  });
+}
 
 const clearDataBtn = document.getElementById("clear-data-btn");
 if (clearDataBtn) {
