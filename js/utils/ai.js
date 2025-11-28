@@ -1,27 +1,22 @@
 // js/utils/ai.js
-// Simple AI for checkers opponent
+// Enhanced AI for checkers with multi-capture search and minimax (depth 2)
+// Mantiene las mismas funciones públicas: getBestMove, makeMove, etc.
 
 import { getValidMoves } from './moves.js';
 
-/**
- * AI Player - Makes moves based on difficulty level
- */
 export class CheckersAI {
   constructor(difficulty = 'medium') {
     this.difficulty = difficulty;
   }
 
   /**
-   * Get the best move for the AI
-   * @param {Board} board - Current board state
-   * @param {string} aiColor - Color the AI is playing ('red' or 'black')
-   * @returns {Object} Move object {piece, move}
+   * Public - devuelve el mejor movimiento { piece, move } o null
    */
   getBestMove(board, aiColor) {
     const allPieces = board.getPiecesOfColor(aiColor);
     const allMoves = [];
 
-    // Collect all possible moves
+    // Recolectar todos los movimientos válidos
     for (const piece of allPieces) {
       const moves = getValidMoves(board, piece);
       for (const move of moves) {
@@ -29,11 +24,9 @@ export class CheckersAI {
       }
     }
 
-    if (allMoves.length === 0) {
-      return null;
-    }
+    if (allMoves.length === 0) return null;
 
-    // FORCED CAPTURES: If any captures are available, only consider those
+    // FORCED CAPTURES: si hay capturas inmediatas, considerar solo esas
     const captures = allMoves.filter(m => m.move.capture);
     const movesToConsider = captures.length > 0 ? captures : allMoves;
 
@@ -50,7 +43,7 @@ export class CheckersAI {
   }
 
   /**
-   * Easy AI - Random move
+   * Random move
    */
   getRandomMove(allMoves) {
     const randomIndex = Math.floor(Math.random() * allMoves.length);
@@ -58,128 +51,348 @@ export class CheckersAI {
   }
 
   /**
-   * Medium AI - Prefer captures, then center control
+   * Medium: prioriza capturas (y multi-capturas), luego control de centro con variedad
    */
   getMediumMove(allMoves, board, aiColor) {
-    // Prefer captures
+    // Prefer captures (inmediatas)
     const captures = allMoves.filter(m => m.move.capture);
     if (captures.length > 0) {
-      // Among captures, prefer multi-captures
-      const multiCaptures = captures.filter(m => 
-        Array.isArray(m.move.capture) && m.move.capture.length > 1
-      );
-      if (multiCaptures.length > 0) {
-        return this.getRandomMove(multiCaptures);
-      }
-      return this.getRandomMove(captures);
+      // Entre capturas, preferir cadenas largas
+      const scored = captures.map(m => {
+        const chain = this.getMaxCaptureChain(board, m.piece, m.move);
+        return { ...m, chain };
+      });
+      // ordenar por chain desc
+      scored.sort((a, b) => b.chain - a.chain);
+      const bestChain = scored[0].chain;
+      const top = scored.filter(s => s.chain === bestChain);
+      return this.getRandomMove(top);
     }
 
-    // Otherwise, prefer center positions
-    const scored = allMoves.map(m => ({
-      ...m,
-      score: this.evaluatePosition(m.move.row, m.move.col, board.size)
-    }));
+    // Si no hay capturas, ponderar por posición (centro) y seguridad
+    const scored = allMoves.map(m => {
+      const posScore = this.evaluatePosition(m.move.row, m.move.col, board.size);
+      // penalizar si después de mover te comen
+      const danger = this.moveLeadsToImmediateCapture(board, m, aiColor) ? -30 : 0;
+      return { ...m, score: posScore + danger };
+    });
 
-    // Sort by score descending
     scored.sort((a, b) => b.score - a.score);
-
-    // Pick from top 3 moves randomly (add variety)
     const topMoves = scored.slice(0, Math.min(3, scored.length));
     return this.getRandomMove(topMoves);
   }
 
   /**
-   * Hard AI - Minimax with some lookahead
+   * Hard: minimax ligero (profundidad 2) + búsqueda de cadenas de captura
    */
   getHardMove(allMoves, board, aiColor) {
-    const opponentColor = aiColor === 'red' ? 'black' : 'red';
-    
-    // Evaluate each move
     const scored = allMoves.map(m => {
-      // Simulate the move
-      const score = this.evaluateMoveDeep(m, board, aiColor, opponentColor);
+      // simular move en clon ligero
+      const clone = this.cloneBoardForAI(board);
+      const clonePiece = clone.getPiece(m.piece.row, m.piece.col);
+      this.applyMoveOnClone(clone, clonePiece, m.move);
+
+      // usar minimax de profundidad 2 (IA -> oponente -> IA)
+      const score = this.minimax(clone, 2, false, aiColor);
       return { ...m, score };
     });
 
-    // Sort by score descending
     scored.sort((a, b) => b.score - a.score);
 
-    // Small randomness among top moves to avoid predictability
+    // seleccionar entre movimientos mejores con un poco de aleatoriedad
     const topScore = scored[0].score;
     const topMoves = scored.filter(m => m.score >= topScore - 10);
-    
     return this.getRandomMove(topMoves);
   }
 
   /**
-   * Evaluate a position on the board
+   * --------------------------
+   * Helper: clon ligero del tablero
+   * --------------------------
+   * Crea un objeto tablero solo para simulación con la API mínima que usa getValidMoves:
+   * - size
+   * - grid (matriz de piezas o null)
+   * - getPiece(row,col)
+   * - movePiece(piece, newRow, newCol)
+   * - removePiece(row,col)
+   * - inBounds(row,col)
+   * - getPiecesOfColor(color)
+   *
+   * NO modifica el Board real.
    */
-  evaluatePosition(row, col, boardSize) {
-    const centerRow = boardSize / 2;
-    const centerCol = boardSize / 2;
-    
-    // Distance from center (lower is better)
-    const distFromCenter = Math.abs(row - centerRow) + Math.abs(col - centerCol);
-    
-    // Center control is good
-    const centerScore = 10 - distFromCenter;
-    
-    // Back row bonus (for defense)
-    const backRowScore = (row === 0 || row === boardSize - 1) ? 5 : 0;
-    
-    return centerScore + backRowScore;
+  cloneBoardForAI(board) {
+    const size = board.size;
+    // clon simple de piezas: copiar propiedades esenciales (color,row,col,king)
+    const grid = Array.from({ length: size }, () => Array.from({ length: size }, () => null));
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const p = board.getPiece(r, c);
+        if (p) {
+          // crear objeto plano con las propiedades mínimas requeridas
+          grid[r][c] = {
+            color: p.color,
+            row: p.row,
+            col: p.col,
+            king: !!p.king
+          };
+        }
+      }
+    }
+
+    const clone = {
+      size,
+      grid,
+      inBounds: function (row, col) {
+        return row >= 0 && row < this.size && col >= 0 && col < this.size;
+      },
+      getPiece: function (row, col) {
+        if (!this.inBounds(row, col)) return null;
+        return this.grid[row][col];
+      },
+      movePiece: function (piece, newRow, newCol) {
+        if (!piece) return;
+        // limpiar origen si pieza coincide
+        if (this.grid[piece.row] && this.grid[piece.row][piece.col] === piece) {
+          this.grid[piece.row][piece.col] = null;
+        } else {
+          // buscar origen por coincidencia de coordenadas si referencia distinta
+          if (this.inBounds(piece.row, piece.col) && this.grid[piece.row][piece.col]) {
+            this.grid[piece.row][piece.col] = null;
+          }
+        }
+        piece.row = newRow;
+        piece.col = newCol;
+        this.grid[newRow][newCol] = piece;
+      },
+      removePiece: function (row, col) {
+        if (!this.inBounds(row, col)) return;
+        this.grid[row][col] = null;
+      },
+      getPiecesOfColor: function (color) {
+        const pieces = [];
+        for (let r = 0; r < this.size; r++) {
+          for (let c = 0; c < this.size; c++) {
+            const p = this.grid[r][c];
+            if (p && p.color === color) pieces.push(p);
+          }
+        }
+        return pieces;
+      }
+    };
+
+    return clone;
   }
 
   /**
-   * Deep evaluation of a move (simple minimax)
+   * Aplica un movimiento sobre el clon (o sobre cualquier tablero que tenga la API usada arriba)
+   * - mueve la pieza
+   * - elimina pieza capturada si existe
+   * - mantiene .king como estaba; la promoción la dejamos al caller si lo desea (pero hacemos set king si corresponde)
    */
-  evaluateMoveDeep(moveObj, board, aiColor, opponentColor) {
+  applyMoveOnClone(clone, piece, move) {
+    if (!piece || !move) return;
+
+    // Si captura es un objeto {row,col} (según tu moves.js)
+    if (move.capture) {
+      // eliminar la pieza capturada
+      clone.removePiece(move.capture.row, move.capture.col);
+    }
+
+    // mover pieza
+    clone.movePiece(piece, move.row, move.col);
+
+    // promoción: según tus reglas en moves.js, filas 0 o size-1 (peón -> rey)
+    if (!piece.king) {
+      const becomesKing = (piece.color === 'red' && move.row === 0) ||
+                         (piece.color === 'black' && move.row === clone.size - 1);
+      if (becomesKing) piece.king = true;
+    }
+  }
+
+  /**
+   * DFS para encontrar la máxima longitud de cadena de capturas empezando por un movimiento dado.
+   * Usa la clonación interna y getValidMoves (de tu moves.js).
+   * Devuelve cuántas capturas totales puede conseguirse (0 si ninguna).
+   */
+  getMaxCaptureChain(board, piece, startMove) {
+    // clonamos y aplicamos startMove
+    const clone = this.cloneBoardForAI(board);
+    const clonePiece = clone.getPiece(piece.row, piece.col);
+    if (!clonePiece) {
+      // si por alguna razón no encontramos la pieza (referencias distintas), buscar por coords
+      const candidates = clone.getPiecesOfColor(piece.color).filter(p => p.row === piece.row && p.col === piece.col);
+      if (candidates.length > 0) clonePiece = candidates[0];
+    }
+    if (!clonePiece) return 0;
+
+    this.applyMoveOnClone(clone, clonePiece, startMove);
+
+    // ahora buscar recursivamente las capturas adicionales desde la nueva posición
+    const dfs = (b, p) => {
+      const moves = getValidMoves(b, p).filter(m => m.capture);
+      if (moves.length === 0) return 0;
+      let best = 0;
+      for (const m of moves) {
+        // clonar para rama
+        const b2 = this.cloneBoardForAI(b);
+        const p2 = b2.getPiece(p.row, p.col);
+        this.applyMoveOnClone(b2, p2, m);
+        const sub = 1 + dfs(b2, p2); // 1 captura ahora + futuras
+        if (sub > best) best = sub;
+      }
+      return best;
+    };
+
+    return dfs(clone, clonePiece);
+  }
+
+  /**
+   * Comprueba si, tras aplicar el movimiento, el oponente puede capturar esa pieza inmediatamente.
+   * Devuelve true si existe captura del oponente que toma la pieza movida.
+   */
+  moveLeadsToImmediateCapture(board, moveObj, aiColor) {
+    const clone = this.cloneBoardForAI(board);
+    // encontrar pieza clon equivalente
+    let clonePiece = clone.getPiece(moveObj.piece.row, moveObj.piece.col);
+    if (!clonePiece) {
+      const cand = clone.getPiecesOfColor(moveObj.piece.color).find(p => p.row === moveObj.piece.row && p.col === moveObj.piece.col);
+      clonePiece = cand || null;
+    }
+    if (!clonePiece) return false;
+
+    this.applyMoveOnClone(clone, clonePiece, moveObj.move);
+
+    const opponent = aiColor === 'red' ? 'black' : 'red';
+    const oppPieces = clone.getPiecesOfColor(opponent);
+
+    for (const p of oppPieces) {
+      const moves = getValidMoves(clone, p);
+      for (const m of moves) {
+        if (m.capture && m.capture.row === clonePiece.row && m.capture.col === clonePiece.col) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Evaluación de tablero (para minimax):
+   * - material: pieza normal = 100, rey = 160
+   * - posición: evaluatePosition (centro, filas)
+   * - seguridad: penaliza piezas vulnerables
+   */
+  evaluateBoard(boardLike, aiColor) {
     let score = 0;
+    const opponent = aiColor === 'red' ? 'black' : 'red';
 
-    // Capture is very valuable
-    if (moveObj.move.capture) {
-      const captureCount = Array.isArray(moveObj.move.capture) 
-        ? moveObj.move.capture.length 
-        : 1;
-      score += captureCount * 50;
-    }
+    for (let r = 0; r < boardLike.size; r++) {
+      for (let c = 0; c < boardLike.size; c++) {
+        const p = boardLike.getPiece(r, c);
+        if (!p) continue;
 
-    // King pieces are valuable
-    if (moveObj.piece.king) {
-      score += 20;
-    }
+        const base = p.king ? 160 : 100;
+        const pos = this.evaluatePosition(p.row, p.col, boardLike.size);
 
-    // Becoming a king is very valuable
-    const wouldBecomeKing = !moveObj.piece.king && (
-      (aiColor === 'red' && moveObj.move.row === 0) ||
-      (aiColor === 'black' && moveObj.move.row === board.size - 1)
-    );
-    if (wouldBecomeKing) {
-      score += 40;
-    }
-
-    // Position score
-    score += this.evaluatePosition(moveObj.move.row, moveObj.move.col, board.size);
-
-    // Piece safety (avoid edges on sides)
-    const isEdge = moveObj.move.col === 0 || moveObj.move.col === board.size - 1;
-    if (!isEdge) {
-      score += 5;
-    }
-
-    // Advancing forward (for non-kings)
-    if (!moveObj.piece.king) {
-      const advancement = aiColor === 'red' 
-        ? (moveObj.piece.row - moveObj.move.row) // Red moves up (decreasing row)
-        : (moveObj.move.row - moveObj.piece.row); // Black moves down (increasing row)
-      score += advancement * 3;
+        if (p.color === aiColor) {
+          score += base + pos;
+          // penalizar si pieza está en peligro tras su posición actual
+          const vulnerable = this.pieceIsVulnerable(boardLike, p);
+          if (vulnerable) score -= 40;
+        } else {
+          score -= base + pos;
+          const vulnerableOpp = this.pieceIsVulnerable(boardLike, p);
+          if (vulnerableOpp) score += 20; // preferir piezas enemigas en peligro
+        }
+      }
     }
 
     return score;
   }
 
   /**
-   * Small delay to make moves feel more natural
+   * Determina si una pieza (en el tablero simulado) puede ser capturada inmediatamente por el oponente.
+   */
+  pieceIsVulnerable(boardLike, piece) {
+    const opponent = piece.color === 'red' ? 'black' : 'red';
+    const oppPieces = boardLike.getPiecesOfColor(opponent);
+
+    for (const p of oppPieces) {
+      const moves = getValidMoves(boardLike, p);
+      for (const m of moves) {
+        if (m.capture && m.capture.row === piece.row && m.capture.col === piece.col) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Minimax simplificado (sin alpha-beta) profundidad variable.
+   * isMax: true si es turno del AI (queremos maximizar)
+   */
+  minimax(boardLike, depth, isMax, aiColor) {
+    if (depth === 0) return this.evaluateBoard(boardLike, aiColor);
+
+    const color = isMax ? aiColor : (aiColor === 'red' ? 'black' : 'red');
+    const pieces = boardLike.getPiecesOfColor(color);
+
+    // recolectar movimientos
+    const moves = [];
+    for (const piece of pieces) {
+      const valid = getValidMoves(boardLike, piece);
+      valid.forEach(m => moves.push({ piece, move: m }));
+    }
+
+    if (moves.length === 0) {
+      // sin movimientos: si es max, mal para AI; si es min, bien para AI
+      return isMax ? -9999 : 9999;
+    }
+
+    if (isMax) {
+      let best = -Infinity;
+      for (const m of moves) {
+        const clone = this.cloneBoardForAI(boardLike);
+        const cp = clone.getPiece(m.piece.row, m.piece.col);
+        this.applyMoveOnClone(clone, cp, m.move);
+        const val = this.minimax(clone, depth - 1, false, aiColor);
+        if (val > best) best = val;
+      }
+      return best;
+    } else {
+      let worst = Infinity;
+      for (const m of moves) {
+        const clone = this.cloneBoardForAI(boardLike);
+        const cp = clone.getPiece(m.piece.row, m.piece.col);
+        this.applyMoveOnClone(clone, cp, m.move);
+        const val = this.minimax(clone, depth - 1, true, aiColor);
+        if (val < worst) worst = val;
+      }
+      return worst;
+    }
+  }
+
+  /**
+   * Evaluación simple de posición: centro + bonus de fila trasera
+   */
+  evaluatePosition(row, col, boardSize) {
+    const centerRow = (boardSize - 1) / 2;
+    const centerCol = (boardSize - 1) / 2;
+
+    const distFromCenter = Math.abs(row - centerRow) + Math.abs(col - centerCol);
+    const centerScore = Math.max(0, 10 - distFromCenter); // más cerca del centro = mejor
+
+    // back row bonus (defensa)
+    const backRowScore = (row === 0 || row === boardSize - 1) ? 4 : 0;
+
+    return centerScore + backRowScore;
+  }
+
+  /**
+   * Igual que antes: pequeña demora para que la IA "parezca" pensar
    */
   async makeMove(callback, delayMs = 1000) {
     return new Promise(resolve => {
@@ -187,6 +400,6 @@ export class CheckersAI {
         callback();
         resolve();
       }, delayMs);
-    });
-  }
+    });
+  }
 }
