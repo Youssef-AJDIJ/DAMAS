@@ -98,15 +98,15 @@
           <div class="stats-grid">
             <div class="stat-box">
               <span class="stat-number" id="preview-wins">0</span>
-              <span class="stat-text">Victorias</span>
+              <span class="stat-text">✅</span>
             </div>
             <div class="stat-box">
               <span class="stat-number" id="preview-draws">0</span>
-              <span class="stat-text">Empates</span>
+              <span class="stat-text">🤝</span>
             </div>
             <div class="stat-box">
               <span class="stat-number" id="preview-losses">0</span>
-              <span class="stat-text">Derrotas</span>
+              <span class="stat-text">⛔</span>
             </div>
           </div>
           <button id="clear-data-btn" class="btn clear-data-btn" type="button">
@@ -118,79 +118,73 @@
 
     <!-- Game Screen -->
     <main id="game-screen" class="game-screen">
-      <h1>🎮 Juego de Damas 🎮</h1>
+      <!-- Controls at the very top -->
+      <div class="controls-top">
+        <button id="new-btn" title="Nueva Partida">🔄</button>
+        <button id="back-setup-btn" title="Configuración">⚙️</button>
+        <button id="clear-btn" class="btn" type="button" title="Borrar Datos">
+          🗑️
+        </button>
+      </div>
 
-      <div class="game-container-single">
-        <!-- Player Card -->
-        <div class="player-card single-player" id="player-card">
-          <h2>
+      <div class="game-container-mobile">
+        
+        <!-- Player Card (Top) -->
+        <div class="player-card-compact" id="player-card">
+          <div class="player-header">
             <span class="player-indicator" id="player-indicator"></span>
-            <span id="player-display-name">Jugador</span>
-          </h2>
-          <div class="stats">
-            <div class="stat-item">
-              <span class="stat-value" id="player-wins">0</span>
-              <span class="stat-label">Ganadas</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value" id="player-draws">0</span>
-              <span class="stat-label">Empates</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value" id="player-losses">0</span>
-              <span class="stat-label">Perdidas</span>
-            </div>
+            <span class="player-name" id="player-display-name">Jugador</span>
+            <span class="piece-count-badge" id="player-piece-count">12</span>
           </div>
-          <div class="piece-count-container">
-            <div class="piece-count">
-              <span class="count-label">Fichas:</span>
-              <span class="count-value" id="player-piece-count">12</span>
+          <div class="stats-compact">
+            <div class="stat-compact">
+              <span class="stat-icon">✅</span>
+              <span class="stat-value" id="player-wins">0</span>
+            </div>
+            <div class="stat-compact">
+              <span class="stat-icon">🤝</span>
+              <span class="stat-value" id="player-draws">0</span>
+            </div>
+            <div class="stat-compact">
+              <span class="stat-icon">⛔</span>
+              <span class="stat-value" id="player-losses">0</span>
             </div>
           </div>
         </div>
+
+    
 
         <!-- Board Section -->
-        <div class="board-section">
+         
+        <div class="board-wrapper">
           <div id="board"></div>
-          <div id="status-message">Preparando juego...</div>
-
-          <div class="controls">
-            <button id="new-btn">🔄 Nuevo Juego</button>
-            <button id="back-setup-btn">⚙️ Configuración</button>
-            <button id="clear-btn" class="btn" type="button">
-              🗑️ Borrar Datos
-            </button>
-          </div>
         </div>
 
-        <!-- CPU Card -->
-        <div class="player-card single-player cpu-card" id="cpu-card">
-          <h2>
+        <!-- CPU Card (Bottom) -->
+        <div class="player-card-compact cpu-card" id="cpu-card">
+          <div class="player-header">
             <span class="player-indicator" id="cpu-indicator"></span>
-            🤖 CPU
-          </h2>
-          <div class="stats">
-            <div class="stat-item">
-              <span class="stat-value" id="cpu-wins">0</span>
-              <span class="stat-label">Ganadas</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value" id="cpu-draws">0</span>
-              <span class="stat-label">Empates</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value" id="cpu-losses">0</span>
-              <span class="stat-label">Perdidas</span>
-            </div>
+            <span class="player-name">CPU 🤖</span>
+            <span class="piece-count-badge" id="cpu-piece-count">12</span>
           </div>
-          <div class="piece-count-container">
-            <div class="piece-count">
-              <span class="count-label">Fichas:</span>
-              <span class="count-value" id="cpu-piece-count">12</span>
+          <div class="stats-compact">
+            <div class="stat-compact">
+              <span class="stat-icon">✅</span>
+              <span class="stat-value" id="cpu-wins">0</span>
+            </div>
+            <div class="stat-compact">
+              <span class="stat-icon">🤝</span>
+              <span class="stat-value" id="cpu-draws">0</span>
+            </div>
+            <div class="stat-compact">
+              <span class="stat-icon">⛔</span>
+              <span class="stat-value" id="cpu-losses">0</span>
             </div>
           </div>
         </div>
       </div>
+
+     
     </main>
 
     <!-- Game Result Modal -->
@@ -199,8 +193,8 @@
         <h2 id="result-title">🎉 ¡Victoria! 🎉</h2>
         <p id="result-message">¡Felicidades!</p>
         <div class="modal-buttons">
-          <button id="modal-new-game">Nuevo Juego</button>
-          <button id="modal-back-setup">Configuración</button>
+          <button id="modal-new-game">🔄</button>
+          <button id="modal-back-setup">⚙️</button>
         </div>
       </div>
     </div>

@@ -161,10 +161,10 @@ function startGame(isOnline = false, onlineConfig = null) {
 
     playerDisplayName.textContent = gameConfig.playerName;
     // Change CPU card to Opponent card
-    document.querySelector("#cpu-card h2").innerHTML = `
-      <span class="player-indicator" id="cpu-indicator"></span>
-      👤 ${opponentName}
-    `;
+    const cpuPlayerName = document.querySelector("#cpu-card .player-name");
+    if (cpuPlayerName) {
+      cpuPlayerName.textContent = `👤 ${opponentName}`;
+    }
 
     // Hide difficulty/stats for online (simplified)
     updateStatisticsDisplay();
@@ -190,10 +190,10 @@ function startGame(isOnline = false, onlineConfig = null) {
 
     // Display player name
     playerDisplayName.textContent = gameConfig.playerName;
-    document.querySelector("#cpu-card h2").innerHTML = `
-      <span class="player-indicator" id="cpu-indicator"></span>
-      🤖 CPU
-    `;
+    const cpuPlayerName = document.querySelector("#cpu-card .player-name");
+    if (cpuPlayerName) {
+      cpuPlayerName.textContent = "CPU 🤖";
+    }
 
     // Load and display statistics
     updateStatisticsDisplay();
