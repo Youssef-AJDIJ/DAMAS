@@ -560,6 +560,7 @@ button:active {
 }
 
 .setup-container h1 {
+  font-size: 2.3rem !important;
   margin-bottom: var(--spacing-md);
 }
 
