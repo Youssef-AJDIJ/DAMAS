@@ -1392,9 +1392,9 @@ main {
 
 /* Media query para tablets y desktop */
 @media (min-width: 768px) {
-  .setup-screen {
+  /* .setup-screen {
     padding: 2rem;
-  }
+  } */
 
   .setup-container {
     padding: 2rem;
